@@ -7,7 +7,7 @@ app.use(cors())
 
 app.use(express.json())  // Parser de json-data
 
-//app.use(express.static("build"))
+app.use(express.static("build"))
 
 morgan.token("body", (req,res) => {
     return JSON.stringify(req.body)
