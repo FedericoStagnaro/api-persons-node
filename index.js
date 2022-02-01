@@ -2,96 +2,115 @@ const express = require("express");
 const morgan = require("morgan")
 const cors = require("cors")
 const app = express()
+const mongoose = require("mongoose")
+const Person = require("./models/Person");
+const { request, response } = require("express");
+require("dotenv").config()
 
-app.use(cors())
 
-app.use(express.json())  // Parser de json-data
+// ========================= MIDDLEWARES ============================
+app.use(cors())                     // Permite el acceso de distintas IP del mundo
+app.use(express.json())             // Parser de json-data
+//app.use(express.static("build"))    // Determina el tipo de aplicacion , concecta con el frontend
 
-app.use(express.static("build"))
-
-morgan.token("body", (req,res) => {
+morgan.token("body", (req, res) => {
     return JSON.stringify(req.body)
 })
-
 //app.use(morgan(':method :url :status :response-time[digits] :body'));
 
+// ========================= DATABASE CONNECTION ====================
 
-let persons = [
-    {
-        id:1,
-        name: "Federico",
-        number:"3513643"
-    },
-    {
-        id:2,
-        name: "Leonardo",
-        number:"51849264"
-    },
-    {
-        id:3,
-        name: "Andres",
-        number:"48486895"
-    }
-]
+const user = process.env.USER_DB
+const pass = process.env.PASSWORD_DB
+const url = `mongodb+srv://${user}:${pass}@clusterdeprueba.wtvmw.mongodb.net/phonebook-app?retryWrites=true&w=majority`
 
-app.get('/api/persons', (request,response) => { 
-    response.json(persons)
-    }
-)
+mongoose.connect(url)
+    .then(() => console.log("Database conected..."))
+    .catch((error) => {console.log(error)})
 
-app.get("/api/persons/:id",(request,response) => {
-    const id = Number(request.params.id)
-    const person = persons.find(p => p.id === id)
-    if (person) {
-        return response.json(person)
-    }
-    else{ 
-        return response.status(404).end()
-    }
+// =============================== END POINTS ===========================
+
+app.get('/api/persons', (request, response,next) => {
+    Person
+        .find()
+        .then((people)=>{
+
+            response.json(people)
+            })
+        .catch(err => {next(err)})
+})
+
+app.get("/api/persons/:id", (request, response,next) => {
+    const {id} = request.params
+    Person
+        .findById(id)
+        .then((person)=>{
+            if(person){response.json(person)}
+            else{response.status(404).end()}})
+        .catch(err => next(err))
 })
 
 
-app.get("/info",(request,response) => { 
-    if (persons.length > 0) {
-        const string = "Phonebook has info for " + persons.length + " people"
-        const date = new Date()
-        return response.send(`<p>${string}</p><br/><p>${date}</p>`)
-    }
+app.get("/info", (request, response,next) => {
+    Person
+        .find()
+        .then(people => {
+            const stringOut = "Phonebook has info for " + people.length + " people"
+            const date = new Date()
+            return response.send(`<p>${stringOut}</p><br/><p>${date}</p>`)
+        })
+        .catch(err => {next(err)})
 })
 
-app.delete("/api/persons/:id",(request,response) => {
-    const id = Number(request.params.id)
-    persons = persons.filter(pers => pers.id !== id)
-    response.status(204).end()
+app.delete("/api/persons/:id", (request, response,next) => {
+    const {id} = request.params
+    Person
+        .findByIdAndDelete(id)
+        .then(() => response.status(204).end())
+        .catch(err => {next(err)})
 })
 
-function getRandomInt(min, max) {
-    return Math.floor(Math.random() * (max - min)) + min;
-  }
+app.put("/api/persons/:id", (request,response,next) => {
+    const {id} = request.params
+    const personToUpdate = request.body
+    Person
+        .findByIdAndUpdate(id, personToUpdate, { returnDocument: "after"})
+        .then(personUpdated => {
+            console.log(personUpdated)
+            response.status(200).json(personUpdated)})
+        .catch(err => next(err))
+})
 
-app.post("/api/persons",(request,response) => {
+app.post("/api/persons", (request, response,next) => {
     const body = request.body
-    
-    if(!body.name || !body.number){
-        return response.status(400).json({error:"Faltan datos para el registro"})
-    }
-    if (persons.find(p => p.name === body.name)){
-        return response.status(400).json({error:"Esta persona ya ha sido agregada..."})
+
+    if (!body.name || !body.number) {
+        const err = { message: "MissingData"}
+        return next(err)
     }
 
-    const person = {
+    const newPerson = new Person({
         name: body.name,
         number: body.number,
-        id: getRandomInt(0,5000)
-    }
-    persons = persons.concat(person)
-    response.status(201).json(person)
+    })
+    newPerson
+        .save()
+        .then(personSaved => response.status(201).json(personSaved))
+        .catch(err => {next(err)})
 })
 
-app.use((req,res)=>{
-    res.status(404).json({"error": "Pagina no encontrada..."})
+// ============================= ERROR HANDLER =========================
+
+app.use((request, response) => {
+    response.status(404).json({ "error": "Pagina no encontrada..." })
+})
+
+app.use((error,request,response,next) => {
+    //console.log(error.message)
+    if(error.name === "CastError"){ response.status(400).send( {error : "ID malformed...."})}
+    next(error)
 })
 
 const PORT = process.env.PORT || 3001
 
-app.listen(PORT, () => {console.log("Server running on port ", PORT)})
+app.listen(PORT, () => { console.log("Server running on port ", PORT) })

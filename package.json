@@ -7,20 +7,23 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "debugg": "node --inspect index.js",
     "deploy": "git push heroku main",
-    "build:ui": "rm -rf build && cd ../../part2/ejercicio2.10 && npm run build && cp -r build ../../part3/ejercicio3/",
+    "build:ui": "rm -rf build && cd ../../part2/ejercicio2-phonebook && npm run build && cp -r build ../../part3/ejercicio3-persons/",
     "deploy:full": " npm run build:ui && git add . && git commit -m buildui && npm run deploy"
   },
   "author": "Federico",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^14.3.2",
     "express": "^4.17.2",
-    "morgan": "^1.10.0"
+    "mongoose": "^6.1.8",
+    "morgan": "^1.10.0",
+    "save": "^2.4.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.15"
-  }
-  ,
+  },
   "proxy": "http://localhost:3001"
 }
