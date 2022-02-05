@@ -11,7 +11,7 @@ require("dotenv").config()
 // ========================= MIDDLEWARES ============================
 app.use(cors())                     // Permite el acceso de distintas IP del mundo
 app.use(express.json())             // Parser de json-data
-//app.use(express.static("build"))    // Determina el tipo de aplicacion , concecta con el frontend
+app.use(express.static("build"))    // Determina el tipo de aplicacion , concecta con el frontend
 
 morgan.token("body", (req, res) => {
     return JSON.stringify(req.body)
