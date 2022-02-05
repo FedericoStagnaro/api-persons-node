@@ -11,7 +11,7 @@ require("dotenv").config()
 // ========================= MIDDLEWARES ============================
 app.use(cors())                     // Permite el acceso de distintas IP del mundo
 app.use(express.json())             // Parser de json-data
-app.use(express.static("build"))    // Determina el tipo de aplicacion , concecta con el frontend
+//app.use(express.static("build"))    // Determina el tipo de aplicacion , concecta con el frontend
 
 morgan.token("body", (req, res) => {
     return JSON.stringify(req.body)
@@ -85,7 +85,7 @@ app.post("/api/persons", (request, response,next) => {
     const body = request.body
 
     if (!body.name || !body.number) {
-        const err = { message: "MissingData"}
+        const err = { name: "MissingData"}
         return next(err)
     }
 
@@ -93,6 +93,7 @@ app.post("/api/persons", (request, response,next) => {
         name: body.name,
         number: body.number,
     })
+
     newPerson
         .save()
         .then(personSaved => response.status(201).json(personSaved))
@@ -105,10 +106,13 @@ app.use((request, response) => {
     response.status(404).json({ "error": "Pagina no encontrada..." })
 })
 
+
 app.use((error,request,response,next) => {
-    //console.log(error.message)
+ 
+    if(error.name === "ValidationError"){ response.status(400).json({error: error.message})}
+    if(error.name === "Missing Data"){ response.status(400).send({error: "Datos faltantes"})}
     if(error.name === "CastError"){ response.status(400).send( {error : "ID malformed...."})}
-    next(error)
+    //next(error)
 })
 
 const PORT = process.env.PORT || 3001
